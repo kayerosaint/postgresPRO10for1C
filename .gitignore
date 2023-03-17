@@ -1,0 +1,3 @@
+postgresql_*
+logs+errors
+test.sh
