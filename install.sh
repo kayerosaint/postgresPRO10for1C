@@ -1,7 +1,14 @@
 #!/bin/bash
-# Script to install postgresql 10 pro for 1C on Centos 7
-# You need root credentials to apply
-# If something breaks, then use the "make restore" command to restore the postgresql configuration file
+# Greetings. This script is designed to install postgresqlpro (a special version for the 1C program) and configure it automatically exclusively on Centos 7.
+# The memory and processor data for configuring the postgres configuration are taken from the htop utility. Root privileges are required for application.
+# Attention! Do not try to use this script if you already have classic postgresql installed, this action has not been tested and will probably lead to a breakdown.
+# When first applied, the program creates a backup copy of the default postgres settings to the current directory, and if the configuration file breaks
+# It can be restored from the backup with the "make restore" command (the script also uses this command if self-check fails)
+# The script is primarily intended for use during the initial installation of the system and is written
+#   for the following versions: postgrespro-1c-10-server-10.6-1.el7.x86_64 postgrespro-1c-10-contrib-10.6-1.el7.x86_64
+# Probably, this script will be further optimized
+
+# Colors
 
 # Colors
 Red='\033[0;31m'          # Red
