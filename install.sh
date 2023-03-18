@@ -791,6 +791,26 @@ else
   echo -e "$Green \n max_locks_per_transaction ok $Color_Off" && sleep 0.3 ;
 fi
 
+# max_connections
+if ! grep -q "max_connections = 2000" $POSTGRES; then
+  line=$(awk '/max_connections/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/max_connections/{ print NR; exit }' $POSTGRES)
+  done
+  echo "max_connections = 2000" >> $POSTGRES && echo -e "$Yellow \n max_connections fixed $Color_Off" && sleep 0.3 ;
+else
+  line=$(awk '/max_connections/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/max_connections/{ print NR; exit }' $POSTGRES)
+    done
+    echo "max_connections = 2000" >> $POSTGRES;
+  fi
+  echo -e "$Green \n max_connections ok $Color_Off" && sleep 0.3 ;
+fi
+
 # full check
 if awk -v str='max_connections|max_locks_per_transaction|escape_string_warning|row_security|ssl|shared_buffers|temp_buffers|work_mem|fsync|checkpoint_completion_target|synchronous_commit|min_wal_size|max_wal_size|commit_delay|commit_siblings|bgwriter_delay|bgwriter_lru_multiplier|bgwriter_lru_maxpages|autovacuum|autovacuum_max_workers|autovacuum_naptime|max_files_per_process|effective_cache_size|random_page_cost|from_collapse_limit|join_collapse_limit|geqo|geqo_threshold|effective_io_concurrency|standard_conforming_strings' -f search.awk $POSTGRES ; then
   echo -e "$Green \n CONFIGURATION FILE OK! $Color_Off"
