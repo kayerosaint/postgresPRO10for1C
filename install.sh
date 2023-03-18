@@ -13,8 +13,9 @@ Color_Off='\033[0m'       # Reset
 # Directives #
 POSTGRES=/var/lib/pgpro/1c-10/data/postgresql.conf
 TEMP_FILE=tmp.md
+TEMP_FILE_1=tmp_1.md
 touch='if [ 1 == 1 ]; then sudo touch $1; fi'
-set -- $TEMP_FILE && eval "$touch" && sudo chmod 0755 $TEMP_FILE
+set -- $TEMP_FILE && eval "$touch" ; set -- $TEMP_FILE_1 && eval "$touch" ; sudo chmod 0755 $TEMP_FILE_1 $TEMP_FILE
 CUR_DIR=$(pwd)
 
 # logs
@@ -141,10 +142,10 @@ echo -e "$Yellow \n WARNING! >>>effective_io_concurrency<<< parameter will be se
 echo -e "$Yellow \n if you want to change it, pls configure manually $Color_Off" && sleep 8;
 sudo sed -i "s|#row_security = on|row_security = off|g" $POSTGRES
 sudo sed -i "s|#ssl = off|ssl = off|g" $POSTGRES
-get1=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/4}') && printf '%.*f\n' 0 $get1 | awk '{print $1"MB"}' > $TEMP_FILE && buffers=$(awk '{print $1}' $TEMP_FILE) && sudo sed -i "s|shared_buffers = 128MB|shared_buffers = $buffers|g" $POSTGRES
+get1=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/1000}') && printf '%.*f\n' 0 $get1 | awk '{print $1*1000/4}' > $TEMP_FILE && get1_1=$(cat $TEMP_FILE) ; printf '%.*f\n' 0 $get1_1 | awk '{print $1"MB"}' > $TEMP_FILE_1 && buffers=$(awk '{print $1}' $TEMP_FILE_1) && sudo sed -i "s|shared_buffers = 128MB|shared_buffers = $buffers|g" $POSTGRES
 #buffers=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/4"MB"}') && sudo sed -i "s|shared_buffers = 128MB|shared_buffers = $buffers|g" $POSTGRES
 sudo sed -i "s|#temp_buffers = 8MB|temp_buffers = 256MB|g" $POSTGRES
-get2=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/32}') && printf '%.*f\n' 0 $get2 | awk '{print $1"MB"}' > $TEMP_FILE && mem=$(awk '{print $1}' $TEMP_FILE) && sudo sed -i "s|#work_mem = 4MB|work_mem = $mem|g" $POSTGRES
+get2=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/1000}') && printf '%.*f\n' 0 $get2 | awk '{print $1*1000/32}' > $TEMP_FILE && get2_1=$(cat $TEMP_FILE) ; printf '%.*f\n' 0 $get2_1 | awk '{print $1"MB"}' > $TEMP_FILE_1 && mem=$(awk '{print $1}' $TEMP_FILE_1) && sudo sed -i "s|#work_mem = 4MB|work_mem = $mem|g" $POSTGRES
 #mem=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/32"MB"}') && sudo sed -i "s|#work_mem = 4MB|work_mem = $mem|g" $POSTGRES
 sudo sed -i "s|#fsync = on|fsync = on|g" $POSTGRES
 sudo sed -i "s|#checkpoint_completion_target = 0.5|checkpoint_completion_target = 0.5|g" $POSTGRES
@@ -165,7 +166,7 @@ else
 fi
 sudo sed -i "s|#autovacuum_naptime = 1min|autovacuum_naptime = 20s|g" $POSTGRES
 sudo sed -i "s|#max_files_per_process = 1000|max_files_per_process = 8000|g" $POSTGRES
-get3=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000}') && printf '%.*f\n' 0 $get3 | awk '{print $1"MB"}' > $TEMP_FILE && cache_size=$(awk '{print $1}' $TEMP_FILE) && sudo sed -i "s|#effective_cache_size = 4GB|effective_cache_size = $cache_size|g" $POSTGRES
+get3=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/1000}') && printf '%.*f\n' 0 $get3 | awk '{print $1*1000"MB"}' > $TEMP_FILE && cache_size=$(awk '{print $1}' $TEMP_FILE) && sudo sed -i "s|#effective_cache_size = 4GB|effective_cache_size = $cache_size|g" $POSTGRES
 #cache_size=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000"MB"}') && sudo sed -i "s|#effective_cache_size = 4GB|effective_cache_size = $cache_size|g" $POSTGRES
 sudo sed -i "s|#random_page_cost = 4.0|random_page_cost = 1.7|g" $POSTGRES
 sudo sed -i "s|#from_collapse_limit = 8|from_collapse_limit = 20|g" $POSTGRES
@@ -182,38 +183,102 @@ echo -e "$Yellow \n Configured $Color_Off" && sleep 2
 ### chkconfig ###
 echo -e "$Cyan \n Now config will be checked, pls wait! $Color_Off" && sleep 2;
 
-# row_security
 if ! grep -q "row_security = off" $POSTGRES; then
-  line=$(awk '/row_security =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "row_security = off" >> $POSTGRES && echo -e "$Yellow \n row_security fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/row_security/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/row_security/{ print NR; exit }' $POSTGRES)
+  done
+  echo "row_security = off" >> $POSTGRES && echo -e "$Yellow \n row_security fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/row_security/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/row_security/{ print NR; exit }' $POSTGRES)
+    done
+    echo "row_security = off" >> $POSTGRES;
+  fi
   echo -e "$Green \n row_security ok $Color_Off" && sleep 0.3 ;
 fi
 
 # ssl
 if ! grep -q "ssl = off" $POSTGRES; then
-  line=$(awk '/ssl =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "ssl = off" >> $POSTGRES && echo -e "$Yellow \n ssl fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/ssl/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/ssl/{ print NR; exit }' $POSTGRES)
+  done
+  echo "ssl = off" >> $POSTGRES && echo -e "$Yellow \n ssl fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/ssl/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/ssl/{ print NR; exit }' $POSTGRES)
+    done
+    echo "ssl = off" >> $POSTGRES;
+  fi
   echo -e "$Green \n ssl ok $Color_Off" && sleep 0.3 ;
 fi
 
 # shared_buffers
 if ! grep -q "shared_buffers = $buffers" $POSTGRES; then
-  line=$(awk '/shared_buffers =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "shared_buffers = $buffers" >> $POSTGRES && echo -e "$Yellow \n shared_buffers fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/shared_buffers/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/shared_buffers/{ print NR; exit }' $POSTGRES)
+  done
+  echo "shared_buffers = $buffers" >> $POSTGRES && echo -e "$Yellow \n shared_buffers fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/shared_buffers/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/shared_buffers/{ print NR; exit }' $POSTGRES)
+    done
+    echo "shared_buffers = $buffers" >> $POSTGRES;
+  fi
   echo -e "$Green \n shared_buffers ok $Color_Off" && sleep 0.3 ;
 fi
 
 # temp_buffers
 if ! grep -q "temp_buffers = 256MB" $POSTGRES; then
-  line=$(awk '/temp_buffers =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "temp_buffers = 256MB" >> $POSTGRES && echo -e "$Yellow \n temp_buffers fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/temp_buffers/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/temp_buffers/{ print NR; exit }' $POSTGRES)
+  done
+  echo "temp_buffers = 256MB" >> $POSTGRES && echo -e "$Yellow \n temp_buffers fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/temp_buffers/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/temp_buffers/{ print NR; exit }' $POSTGRES)
+    done
+    echo "temp_buffers = 256MB" >> $POSTGRES;
+  fi
   echo -e "$Green \n temp_buffers ok $Color_Off" && sleep 0.3 ;
 fi
 
 # work_mem
 if ! grep -q "work_mem = $mem" $POSTGRES; then
-  line=$(awk '/work_mem =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "work_mem = $mem" >> $POSTGRES && echo -e "$Yellow \n work_mem fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/work_mem/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/work_mem/{ print NR; exit }' $POSTGRES)
+  done
+  echo "work_mem = $mem" >> $POSTGRES && echo -e "$Yellow \n work_mem fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/work_mem/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/work_mem/{ print NR; exit }' $POSTGRES)
+    done
+    echo "work_mem = $mem" >> $POSTGRES;
+  fi
   echo -e "$Green \n work_mem ok $Color_Off" && sleep 0.3 ;
 fi
 
@@ -223,74 +288,222 @@ if ! grep -q "fsync = on" $POSTGRES; then
 else
   echo -e "$Green \n fsync ok $Color_Off" && sleep 0.3 ;
 fi
+if ! grep -q "fsync = on" $POSTGRES; then
+  line=$(awk '/fsync/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/fsync/{ print NR; exit }' $POSTGRES)
+  done
+  echo "fsync = on" >> $POSTGRES && echo -e "$Yellow \n fsync fixed $Color_Off" && sleep 0.3 ;
+else
+  line=$(awk '/fsync/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/fsync/{ print NR; exit }' $POSTGRES)
+    done
+    echo "fsync = on" >> $POSTGRES;
+  fi
+  echo -e "$Green \n fsync ok $Color_Off" && sleep 0.3 ;
+fi
 
 # checkpoint_completion_target
 if ! grep -q "checkpoint_completion_target = 0.5" $POSTGRES; then
-  line=$(awk '/checkpoint_completion_target =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "checkpoint_completion_target = 0.5" >> $POSTGRES && echo -e "$Yellow \n checkpoint_completion_target fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/checkpoint_completion_target/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/checkpoint_completion_target/{ print NR; exit }' $POSTGRES)
+  done
+  echo "checkpoint_completion_target = 0.5" >> $POSTGRES && echo -e "$Yellow \n checkpoint_completion_target fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/checkpoint_completion_target/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/checkpoint_completion_target/{ print NR; exit }' $POSTGRES)
+    done
+    echo "checkpoint_completion_target = 0.5" >> $POSTGRES;
+  fi
   echo -e "$Green \n checkpoint_completion_target ok $Color_Off" && sleep 0.3 ;
 fi
 
 # synchronous_commit
 if ! grep -q "synchronous_commit = off" $POSTGRES; then
-  line=$(awk '/synchronous_commit =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "synchronous_commit = off" >> $POSTGRES && echo -e "$Yellow \n synchronous_commit fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/synchronous_commit/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/synchronous_commit/{ print NR; exit }' $POSTGRES)
+  done
+  echo "synchronous_commit = off" >> $POSTGRES && echo -e "$Yellow \n synchronous_commit fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/synchronous_commit/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/synchronous_commit/{ print NR; exit }' $POSTGRES)
+    done
+    echo "synchronous_commit = off" >> $POSTGRES;
+  fi
   echo -e "$Green \n synchronous_commit ok $Color_Off" && sleep 0.3 ;
 fi
 
 # min_wal_size
 if ! grep -q "min_wal_size = 512MB" $POSTGRES; then
-  line=$(awk '/min_wal_size =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "min_wal_size = 512MB" >> $POSTGRES && echo -e "$Yellow \n min_wal_size fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/min_wal_size/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/min_wal_size/{ print NR; exit }' $POSTGRES)
+  done
+  echo "min_wal_size = 512MB" >> $POSTGRES && echo -e "$Yellow \n min_wal_size fixed $Color_Off" && sleep 0.3 ;
 else
-  echo -e "$Green \n min_wal_size ok $Color_Off" && sleep 0.3
+  line=$(awk '/min_wal_size/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/min_wal_size/{ print NR; exit }' $POSTGRES)
+    done
+    echo "min_wal_size = 512MB" >> $POSTGRES;
+  fi
+  echo -e "$Green \n min_wal_size ok $Color_Off" && sleep 0.3 ;
 fi
 
 # max_wal_size
 if ! grep -q "max_wal_size = 1GB" $POSTGRES; then
-  line=$(awk '/max_wal_size =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "max_wal_size = 1GB" >> $POSTGRES && echo -e "$Yellow \n max_wal_size fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/max_wal_size/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/max_wal_size/{ print NR; exit }' $POSTGRES)
+  done
+  echo "max_wal_size = 1GB" >> $POSTGRES && echo -e "$Yellow \n max_wal_size fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/max_wal_size/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/max_wal_size/{ print NR; exit }' $POSTGRES)
+    done
+    echo "max_wal_size = 1GB" >> $POSTGRES;
+  fi
   echo -e "$Green \n max_wal_size ok $Color_Off" && sleep 0.3 ;
 fi
 
 # commit_delay
 if ! grep -q "commit_delay = 1000" $POSTGRES; then
-  line=$(awk '/commit_delay =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "commit_delay = 1000" >> $POSTGRES && echo -e "$Yellow \n commit_delay fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/commit_delay/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/commit_delay/{ print NR; exit }' $POSTGRES)
+  done
+  echo "commit_delay = 1000" >> $POSTGRES && echo -e "$Yellow \n commit_delay fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/commit_delay/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/commit_delay/{ print NR; exit }' $POSTGRES)
+    done
+    echo "commit_delay = 1000" >> $POSTGRES;
+  fi
   echo -e "$Green \n commit_delay ok $Color_Off" && sleep 0.3 ;
 fi
 
 # commit_siblings
 if ! grep -q "commit_siblings = 5" $POSTGRES; then
-  line=$(awk '/commit_siblings =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "commit_siblings = 5" >> $POSTGRES && echo -e "$Yellow \n commit_siblings fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/commit_siblings/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/commit_siblings/{ print NR; exit }' $POSTGRES)
+  done
+  echo "commit_siblings = 5" >> $POSTGRES && echo -e "$Yellow \n commit_siblings fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/commit_siblings/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/commit_siblings/{ print NR; exit }' $POSTGRES)
+    done
+    echo "commit_siblings = 5" >> $POSTGRES;
+  fi
   echo -e "$Green \n commit_siblings ok $Color_Off" && sleep 0.3 ;
 fi
 
 # bgwriter_delay
 if ! grep -q "bgwriter_delay = 20ms" $POSTGRES; then
-  line=$(awk '/bgwriter_delay =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "bgwriter_delay = 20ms" >> $POSTGRES && echo -e "$Yellow \n bgwriter_delay fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/bgwriter_delay/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/bgwriter_delay/{ print NR; exit }' $POSTGRES)
+  done
+  echo "bgwriter_delay = 20ms" >> $POSTGRES && echo -e "$Yellow \n bgwriter_delay fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/bgwriter_delay/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/bgwriter_delay/{ print NR; exit }' $POSTGRES)
+    done
+    echo "bgwriter_delay = 20ms" >> $POSTGRES;
+  fi
   echo -e "$Green \n bgwriter_delay ok $Color_Off" && sleep 0.3 ;
 fi
 
 # bgwriter_lru_multiplier
 if ! grep -q "bgwriter_lru_multiplier = 4.0" $POSTGRES; then
-  line=$(awk '/bgwriter_lru_multiplier =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "bgwriter_lru_multiplier = 4.0" >> $POSTGRES && echo -e "$Yellow \n bgwriter_lru_multiplier fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/bgwriter_lru_multiplier/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/bgwriter_lru_multiplier/{ print NR; exit }' $POSTGRES)
+  done
+  echo "bgwriter_lru_multiplier = 4.0" >> $POSTGRES && echo -e "$Yellow \n bgwriter_lru_multiplier fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/bgwriter_lru_multiplier/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/bgwriter_lru_multiplier/{ print NR; exit }' $POSTGRES)
+    done
+    echo "bgwriter_lru_multiplier = 4.0" >> $POSTGRES;
+  fi
   echo -e "$Green \n bgwriter_lru_multiplier ok $Color_Off" && sleep 0.3 ;
 fi
 
 # bgwriter_lru_maxpages
 if ! grep -q "bgwriter_lru_maxpages = 400" $POSTGRES; then
-  line=$(awk '/bgwriter_lru_maxpages =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "bgwriter_lru_maxpages = 400" >> $POSTGRES && echo -e "$Yellow \n bgwriter_lru_maxpages fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/bgwriter_lru_maxpages/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/bgwriter_lru_maxpages/{ print NR; exit }' $POSTGRES)
+  done
+  echo "bgwriter_lru_maxpages = 400" >> $POSTGRES && echo -e "$Yellow \n bgwriter_lru_maxpages fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/bgwriter_lru_maxpages/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/bgwriter_lru_maxpages/{ print NR; exit }' $POSTGRES)
+    done
+    echo "bgwriter_lru_maxpages = 400" >> $POSTGRES;
+  fi
   echo -e "$Green \n bgwriter_lru_maxpages ok $Color_Off" && sleep 0.3 ;
 fi
 
 # autovacuum
 if ! grep -q "autovacuum = on" $POSTGRES; then
-  line=$(awk '/autovacuum =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "autovacuum = on" >> $POSTGRES && echo -e "$Yellow \n autovacuum fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/autovacuum/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/autovacuum/{ print NR; exit }' $POSTGRES)
+  done
+  echo "autovacuum = on" >> $POSTGRES && echo -e "$Yellow \n autovacuum fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/autovacuum/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/autovacuum/{ print NR; exit }' $POSTGRES)
+    done
+    echo "autovacuum = on" >> $POSTGRES;
+  fi
   echo -e "$Green \n autovacuum ok $Color_Off" && sleep 0.3 ;
 fi
 
@@ -299,108 +512,283 @@ a="4" && get4=$(awk -F'thr; ' 'FNR==3 {print $2}' cfg.md | awk -F' running' '{pr
 if [ "$a" -gt "$b" ]; then
   sudo sed -i "s|#autovacuum_max_workers = 3|autovacuum_max_workers = $a|g" $POSTGRES
   if ! grep -q "autovacuum_max_workers = $a" $POSTGRES; then
-    line=$(awk '/autovacuum_max_workers =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "autovacuum_max_workers = $a" >> $POSTGRES && echo -e "$Yellow \n autovacuum_max_workers fixed $Color_Off" && sleep 0.3 ;
+    line=$(awk '/autovacuum_max_workers/{ print NR; exit }' $POSTGRES) &&
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/autovacuum_max_workers/{ print NR; exit }' $POSTGRES)
+    done
+    echo "autovacuum_max_workers = $a" >> $POSTGRES && echo -e "$Yellow \n autovacuum_max_workers fixed $Color_Off" && sleep 0.3 ;
   else
+    line=$(awk '/autovacuum_max_workers/{ print NR; exit }' $POSTGRES) &&
+    if [ ${line} > "1" ]; then
+      while [ ${line} > "0" ]
+      do
+      sed -i "${line}d" $POSTGRES && line=$(awk '/autovacuum_max_workers/{ print NR; exit }' $POSTGRES)
+      done
+      echo "autovacuum_max_workers = $a" >> $POSTGRES;
+    fi
     echo -e "$Green \n autovacuum_max_workers ok $Color_Off" && sleep 0.3 ;
   fi
 else
   autovacuum=$b && sudo sed -i "s|#autovacuum_max_workers = 3|autovacuum_max_workers = $b|g" $POSTGRES
   if ! grep -q "autovacuum_max_workers = $b" $POSTGRES; then
-    line=$(awk '/autovacuum_max_workers =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "autovacuum_max_workers = $b" >> $POSTGRES && echo -e "$Yellow \n autovacuum_max_workers fixed $Color_Off" && sleep 0.3 ;
+    line=$(awk '/autovacuum_max_workers/{ print NR; exit }' $POSTGRES) &&
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/autovacuum_max_workers/{ print NR; exit }' $POSTGRES)
+    done
+    echo "autovacuum_max_workers = $b" >> $POSTGRES && echo -e "$Yellow \n autovacuum_max_workers fixed $Color_Off" && sleep 0.3 ;
   else
+    line=$(awk '/autovacuum_max_workers/{ print NR; exit }' $POSTGRES) &&
+    if [ ${line} > "1" ]; then
+      while [ ${line} > "0" ]
+      do
+      sed -i "${line}d" $POSTGRES && line=$(awk '/autovacuum_max_workers/{ print NR; exit }' $POSTGRES)
+      done
+      echo "autovacuum_max_workers = $b" >> $POSTGRES;
+    fi
     echo -e "$Green \n autovacuum_max_workers ok $Color_Off" && sleep 0.3 ;
   fi
 fi
 
 # autovacuum_naptime
 if ! grep -q "autovacuum_naptime = 20s" $POSTGRES; then
-  line=$(awk '/autovacuum_naptime =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "autovacuum_naptime = 20s" >> $POSTGRES && echo -e "$Yellow \n autovacuum_naptime fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/autovacuum_naptime/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/autovacuum_naptime/{ print NR; exit }' $POSTGRES)
+  done
+  echo "autovacuum_naptime = 20s" >> $POSTGRES && echo -e "$Yellow \n autovacuum_naptime fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/autovacuum_naptime/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/autovacuum_naptime/{ print NR; exit }' $POSTGRES)
+    done
+    echo "autovacuum_naptime = 20s" >> $POSTGRES;
+  fi
   echo -e "$Green \n autovacuum_naptime ok $Color_Off" && sleep 0.3 ;
 fi
 
 # max_files_per_process
 if ! grep -q "max_files_per_process = 8000" $POSTGRES; then
-  line=$(awk '/max_files_per_process =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "max_files_per_process = 8000" >> $POSTGRES && echo -e "$Yellow \n max_files_per_process fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/max_files_per_process/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/max_files_per_process/{ print NR; exit }' $POSTGRES)
+  done
+  echo "max_files_per_process = 8000" >> $POSTGRES && echo -e "$Yellow \n max_files_per_process fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/max_files_per_process/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/max_files_per_process/{ print NR; exit }' $POSTGRES)
+    done
+    echo "max_files_per_process = 8000" >> $POSTGRES;
+  fi
   echo -e "$Green \n max_files_per_process ok $Color_Off" && sleep 0.3 ;
 fi
 
 # effective_cache_size
 if ! grep -q "effective_cache_size = $cache_size" $POSTGRES; then
-  line=$(awk '/effective_cache_size =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "effective_cache_size = $cache_size" >> $POSTGRES && echo -e "$Yellow \n effective_cache_size fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/effective_cache_size/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/effective_cache_size/{ print NR; exit }' $POSTGRES)
+  done
+  echo "effective_cache_size = $cache_size" >> $POSTGRES && echo -e "$Yellow \n effective_cache_size fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/effective_cache_size/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/effective_cache_size/{ print NR; exit }' $POSTGRES)
+    done
+    echo "effective_cache_size = $cache_size" >> $POSTGRES;
+  fi
   echo -e "$Green \n effective_cache_size ok $Color_Off" && sleep 0.3 ;
 fi
 
 # random_page_cost
 if ! grep -q "random_page_cost = 1.7" $POSTGRES; then
-  line=$(awk '/random_page_cost =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "random_page_cost = 1.7" >> $POSTGRES && echo -e "$Yellow \n random_page_cost fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/random_page_cost/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/random_page_cost/{ print NR; exit }' $POSTGRES)
+  done
+  echo "random_page_cost = 1.7" >> $POSTGRES && echo -e "$Yellow \n random_page_cost fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/random_page_cost/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/random_page_cost/{ print NR; exit }' $POSTGRES)
+    done
+    echo "random_page_cost = 1.7" >> $POSTGRES;
+  fi
   echo -e "$Green \n random_page_cost ok $Color_Off" && sleep 0.3 ;
 fi
 
 # from_collapse_limit
 if ! grep -q "from_collapse_limit = 20" $POSTGRES; then
-  line=$(awk '/from_collapse_limit =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "from_collapse_limit = 20" >> $POSTGRES && echo -e "$Yellow \n from_collapse_limit fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/from_collapse_limit/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/from_collapse_limit/{ print NR; exit }' $POSTGRES)
+  done
+  echo "from_collapse_limit = 20" >> $POSTGRES && echo -e "$Yellow \n from_collapse_limit fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/from_collapse_limit/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/from_collapse_limit/{ print NR; exit }' $POSTGRES)
+    done
+    echo "from_collapse_limit = 20" >> $POSTGRES;
+  fi
   echo -e "$Green \n from_collapse_limit ok $Color_Off" && sleep 0.3 ;
 fi
 
 # join_collapse_limit
 if ! grep -q "join_collapse_limit = 20" $POSTGRES; then
-  line=$(awk '/join_collapse_limit =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "join_collapse_limit = 20" >> $POSTGRES && echo -e "$Yellow \n join_collapse_limit fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/join_collapse_limit/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/join_collapse_limit/{ print NR; exit }' $POSTGRES)
+  done
+  echo "join_collapse_limit = 20" >> $POSTGRES && echo -e "$Yellow \n join_collapse_limit fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/join_collapse_limit/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/join_collapse_limit/{ print NR; exit }' $POSTGRES)
+    done
+    echo "join_collapse_limit = 20" >> $POSTGRES;
+  fi
   echo -e "$Green \n join_collapse_limit ok $Color_Off" && sleep 0.3 ;
 fi
 
 # geqo
 if ! grep -q "geqo = on" $POSTGRES; then
-  line=$(awk '/geqo =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "geqo = on" >> $POSTGRES && echo -e "$Yellow \n geqo fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/geqo/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/geqo/{ print NR; exit }' $POSTGRES)
+  done
+  echo "geqo = on" >> $POSTGRES && echo -e "$Yellow \n geqo fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/geqo/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/geqo/{ print NR; exit }' $POSTGRES)
+    done
+    echo "geqo = on" >> $POSTGRES;
+  fi
   echo -e "$Green \n geqo ok $Color_Off" && sleep 0.3 ;
 fi
 
 # geqo_threshold
 if ! grep -q "geqo_threshold = 12" $POSTGRES; then
-  line=$(awk '/geqo_threshold =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "geqo_threshold = 12" >> $POSTGRES && echo -e "$Yellow \n geqo_threshold fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/geqo_threshold/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/geqo_threshold/{ print NR; exit }' $POSTGRES)
+  done
+  echo "geqo_threshold = 12" >> $POSTGRES && echo -e "$Yellow \n geqo_threshold fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/geqo_threshold/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/geqo_threshold/{ print NR; exit }' $POSTGRES)
+    done
+    echo "geqo_threshold = 12" >> $POSTGRES;
+  fi
   echo -e "$Green \n geqo_threshold ok $Color_Off" && sleep 0.3 ;
 fi
 
 # effective_io_concurrency
 if ! grep -q "effective_io_concurrency = 2" $POSTGRES; then
-  line=$(awk '/effective_io_concurrency =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "effective_io_concurrency = 2" >> $POSTGRES && echo -e "$Yellow \n effective_io_concurrency fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/effective_io_concurrency/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/effective_io_concurrency/{ print NR; exit }' $POSTGRES)
+  done
+  echo "effective_io_concurrency = 2" >> $POSTGRES && echo -e "$Yellow \n effective_io_concurrency fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/effective_io_concurrency/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/effective_io_concurrency/{ print NR; exit }' $POSTGRES)
+    done
+    echo "effective_io_concurrency = 2" >> $POSTGRES;
+  fi
   echo -e "$Green \n effective_io_concurrency ok $Color_Off" && sleep 0.3 ;
 fi
 
 # standard_conforming_strings
 if ! grep -q "standard_conforming_strings = off" $POSTGRES; then
-  line=$(awk '/standard_conforming_strings =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "standard_conforming_strings = off" >> $POSTGRES && echo -e "$Yellow \n standard_conforming_strings fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/standard_conforming_strings/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/standard_conforming_strings/{ print NR; exit }' $POSTGRES)
+  done
+  echo "standard_conforming_strings = off" >> $POSTGRES && echo -e "$Yellow \n standard_conforming_strings fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/standard_conforming_strings/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/standard_conforming_strings/{ print NR; exit }' $POSTGRES)
+    done
+    echo "standard_conforming_strings = off" >> $POSTGRES;
+  fi
   echo -e "$Green \n standard_conforming_strings ok $Color_Off" && sleep 0.3 ;
 fi
 
 # escape_string_warning
 if ! grep -q "escape_string_warning = off" $POSTGRES; then
-  line=$(awk '/escape_string_warning =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "escape_string_warning = off" >> $POSTGRES && echo -e "$Yellow \n escape_string_warning fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/escape_string_warning/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/escape_string_warning/{ print NR; exit }' $POSTGRES)
+  done
+  echo "escape_string_warning = off" >> $POSTGRES && echo -e "$Yellow \n escape_string_warning fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/escape_string_warning/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/escape_string_warning/{ print NR; exit }' $POSTGRES)
+    done
+    echo "escape_string_warning = off" >> $POSTGRES;
+  fi
   echo -e "$Green \n escape_string_warning ok $Color_Off" && sleep 0.3 ;
 fi
 
 # max_locks_per_transaction
 if ! grep -q "max_locks_per_transaction = 150" $POSTGRES; then
-  line=$(awk '/max_locks_per_transaction =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "max_locks_per_transaction = 150" >> $POSTGRES && echo -e "$Yellow \n max_locks_per_transaction fixed $Color_Off" && sleep 0.3 ;
+  line=$(awk '/max_locks_per_transaction/{ print NR; exit }' $POSTGRES) &&
+  while [ ${line} > "0" ]
+  do
+  sed -i "${line}d" $POSTGRES && line=$(awk '/max_locks_per_transaction/{ print NR; exit }' $POSTGRES)
+  done
+  echo "max_locks_per_transaction = 150" >> $POSTGRES && echo -e "$Yellow \n max_locks_per_transaction fixed $Color_Off" && sleep 0.3 ;
 else
+  line=$(awk '/max_locks_per_transaction/{ print NR; exit }' $POSTGRES) &&
+  if [ ${line} > "1" ]; then
+    while [ ${line} > "0" ]
+    do
+    sed -i "${line}d" $POSTGRES && line=$(awk '/max_locks_per_transaction/{ print NR; exit }' $POSTGRES)
+    done
+    echo "max_locks_per_transaction = 150" >> $POSTGRES;
+  fi
   echo -e "$Green \n max_locks_per_transaction ok $Color_Off" && sleep 0.3 ;
-fi
-
-# max_connections
-if ! grep -q "max_connections = 2000" $POSTGRES; then
-  line=$(awk '/max_connections =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "max_connections = 2000" >> $POSTGRES && echo -e "$Yellow \n max_connections fixed $Color_Off" && sleep 0.3 ;
-else
-  echo -e "$Green \n max_connections ok $Color_Off" && sleep 0.3 ;
 fi
 
 # full check
@@ -425,6 +813,10 @@ sudo service postgrespro-1c-10 restart > /dev/null;
 echo -e "$Cyan \n Check service postgres status $Color_Off"
 sudo service postgrespro-1c-10 status > $TEMP_FILE ;
 awk -F'Active:' 'FNR==3 {print $2}' $TEMP_FILE | awk -F'since' '{print "\033[33m"$1" \033[0m";}' && sleep 2;
+if grep -q "failed" $TEMP_FILE; then
+echo -e "$Red \n WARNING! Postgres didnt start properly. Script was stopped! $Color_Off" && sleep 3 &&
+exit;
+fi
 
 # create path
 echo -e "$Cyan \n Create path, symlink, permission $Color_Off" && sleep 1;
@@ -478,5 +870,5 @@ sudo -u postgres psql -c "ALTER USER postgres PASSWORD '000';"
 
 # copy postgres config file to current dirrectory
 echo -e "$Cyan \n Copy config file to current location $Color_Off" && sleep 1;
-cp /var/lib/pgpro/1c-10/data/postgresql.conf $CUR_DIR/postgresql_configured_$(date "+%Y-%m-%d").conf && sudo rm -rf $CUR_DIR/cfg.md && sudo rm -rf $CUR_DIR/$TEMP_FILE ;
+cp /var/lib/pgpro/1c-10/data/postgresql.conf $CUR_DIR/postgresql_configured_$(date "+%Y-%m-%d").conf && sudo rm -rf $CUR_DIR/cfg.md && sudo rm -rf $CUR_DIR/$TEMP_FILE $CUR_DIR/$TEMP_FILE_1 $CUR_DIR/0 $CUR_DIR/1;
 service postgrespro-1c-10 status
