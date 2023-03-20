@@ -8,6 +8,15 @@
 #   for the following versions: postgrespro-1c-10-server-10.6-1.el7.x86_64 postgrespro-1c-10-contrib-10.6-1.el7.x86_64
 # Probably, this script will be further optimized
 
+# get decrypt
+string=$1
+if [[ $string == "show" ]]; then
+echo -e "Please enter decryption key"
+read -s -p "Your postgres password: " decr_n
+decrypt_pass=$(cat secr.key | openssl enc -aes-256-cbc -md sha512 -a -d -salt -pass pass:$decr_n)
+echo "$decrypt_pass" ; exit ;
+fi
+
 # Colors
 
 # Colors
@@ -64,7 +73,7 @@ echo -e "$Cyan \n Create new user? $Color_Off"
     sleep 1
     esac
 
-# create users?
+# wheel group?
 echo -e "$Cyan \n Add selected user to group WHEEL? $Color_Off"
   echo "1 - yes, 2 - no"
   read wheel_group
@@ -290,11 +299,6 @@ else
 fi
 
 # fsync
-if ! grep -q "fsync = on" $POSTGRES; then
-  line=$(awk '/fsync =/{ print NR; exit }' $POSTGRES) && sed -i "${line}d" $POSTGRES && echo "fsync = on" >> $POSTGRES && echo -e "$Yellow \n fsync fixed $Color_Off" && sleep 0.3 ;
-else
-  echo -e "$Green \n fsync ok $Color_Off" && sleep 0.3 ;
-fi
 if ! grep -q "fsync = on" $POSTGRES; then
   line=$(awk '/fsync/{ print NR; exit }' $POSTGRES) &&
   while [ ${line} > "0" ]
@@ -892,10 +896,38 @@ else
 fi
 
 # change postgres password
-echo -e "$Yellow \n WARNING! Postges password will be set >>000<<< , you could change it manually $Color_Off" && sleep 5;
-sudo -u postgres psql -c "ALTER USER postgres PASSWORD '000';"
+echo -e "$Cyan \n Create new password and set to postgres? $Color_Off"
+  echo "1 - yes, 2 - no"
+  read pass_new
+  case $pass_new in
+    1)
+    sleep 1
+    echo -e "$Yellow \n Enter password!: $Color_Off"
+    while true; do
+      read -s -p "Password: " pswd_n
+      echo
+      echo -e "$Yellow \n Re-enter password!: $Color_Off" && read -s -p "Password (again): " pswd_n_2
+      echo
+      [ "$pswd_n" = "$pswd_n_2" ] && break
+      echo -e "$Red \n Wrong password! Please try again! $Color_Off"
+    done
+    sudo rm -rf secr.key
+    encr=$(hexdump -vn16 -e'4/4 "%08X" 1 "\n"' /dev/urandom) # generates random passwd
+    echo $pswd_n | openssl enc -aes-256-cbc -md sha512 -a -salt -pass pass:$encr > secr.key && chmod 0400 secr.key
+    decrypt_pass=$(cat secr.key | openssl enc -aes-256-cbc -md sha512 -a -d -salt -pass pass:$encr)
+    sudo -u postgres psql -c "ALTER USER postgres PASSWORD '$decrypt_pass';" ;;
+    2)
+    echo -e "$Red \n aborted $Color_Off"
+    sleep 1 ;;
+    *)
+    echo -e "$Red \n error $Color_Off"
+    sleep 1
+    esac
 
 # copy postgres config file to current dirrectory
 echo -e "$Cyan \n Copy config file to current location $Color_Off" && sleep 1;
 cp /var/lib/pgpro/1c-10/data/postgresql.conf $CUR_DIR/postgresql_configured_$(date "+%Y-%m-%d").conf && sudo rm -rf $CUR_DIR/cfg.md && sudo rm -rf $CUR_DIR/$TEMP_FILE $CUR_DIR/$TEMP_FILE_1 $CUR_DIR/0 $CUR_DIR/1;
 service postgrespro-1c-10 status
+echo -e "$Yellow \n decryption key: $Color_Off $encr"
+echo -e "$Yellow \n Warning! Save decryption key if you forget postgres password! $Color_Off"
+echo -e "$Yellow \n You could decrypt it through commant >>install.sh show<< entering decryption key $Color_Off"
