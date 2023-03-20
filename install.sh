@@ -12,9 +12,9 @@
 string=$1
 if [[ $string == "show" ]]; then
 echo -e "Please enter decryption key"
-read -s -p "Your postgres password: " decr_n
+read -p "key: " decr_n
 decrypt_pass=$(cat secr.key | openssl enc -aes-256-cbc -md sha512 -a -d -salt -pass pass:$decr_n)
-echo "$decrypt_pass" ; exit ;
+echo "postgres password: $decrypt_pass" ; exit ;
 fi
 
 # Colors
@@ -929,5 +929,5 @@ echo -e "$Cyan \n Copy config file to current location $Color_Off" && sleep 1;
 cp /var/lib/pgpro/1c-10/data/postgresql.conf $CUR_DIR/postgresql_configured_$(date "+%Y-%m-%d").conf && sudo rm -rf $CUR_DIR/cfg.md && sudo rm -rf $CUR_DIR/$TEMP_FILE $CUR_DIR/$TEMP_FILE_1 $CUR_DIR/0 $CUR_DIR/1;
 service postgrespro-1c-10 status
 echo -e "$Yellow \n decryption key: $Color_Off $encr"
-echo -e "$Yellow \n Warning! Save decryption key if you forget postgres password! $Color_Off"
+echo -e "$Yellow \n Attention! Save decryption key if you forget postgres password! $Color_Off"
 echo -e "$Yellow \n You could decrypt it through commant >>install.sh show<< entering decryption key $Color_Off"
