@@ -158,10 +158,10 @@ echo -e "$Yellow \n WARNING! >>>effective_io_concurrency<<< parameter will be se
 echo -e "$Yellow \n if you want to change it, pls configure manually $Color_Off" && sleep 8;
 sudo sed -i "s|#row_security = on|row_security = off|g" $POSTGRES
 sudo sed -i "s|#ssl = off|ssl = off|g" $POSTGRES
-get1=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/1000}') && printf '%.*f\n' 0 $get1 | awk '{print $1*1000/4}' > $TEMP_FILE && get1_1=$(cat $TEMP_FILE) ; printf '%.*f\n' 0 $get1_1 | awk '{print $1"MB"}' > $TEMP_FILE_1 && buffers=$(awk '{print $1}' $TEMP_FILE_1) && sudo sed -i "s|shared_buffers = 128MB|shared_buffers = $buffers|g" $POSTGRES
+get1=$(awk -F'/' 'FNR==4 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/1000}') && printf '%.*f\n' 0 $get1 | awk '{print $1*1000/4}' > $TEMP_FILE && get1_1=$(cat $TEMP_FILE) ; printf '%.*f\n' 0 $get1_1 | awk '{print $1"MB"}' > $TEMP_FILE_1 && buffers=$(awk '{print $1}' $TEMP_FILE_1) && sudo sed -i "s|shared_buffers = 128MB|shared_buffers = $buffers|g" $POSTGRES
 #buffers=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/4"MB"}') && sudo sed -i "s|shared_buffers = 128MB|shared_buffers = $buffers|g" $POSTGRES
 sudo sed -i "s|#temp_buffers = 8MB|temp_buffers = 256MB|g" $POSTGRES
-get2=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/1000}') && printf '%.*f\n' 0 $get2 | awk '{print $1*1000/32}' > $TEMP_FILE && get2_1=$(cat $TEMP_FILE) ; printf '%.*f\n' 0 $get2_1 | awk '{print $1"MB"}' > $TEMP_FILE_1 && mem=$(awk '{print $1}' $TEMP_FILE_1) && sudo sed -i "s|#work_mem = 4MB|work_mem = $mem|g" $POSTGRES
+get2=$(awk -F'/' 'FNR==4 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/1000}') && printf '%.*f\n' 0 $get2 | awk '{print $1*1000/32}' > $TEMP_FILE && get2_1=$(cat $TEMP_FILE) ; printf '%.*f\n' 0 $get2_1 | awk '{print $1"MB"}' > $TEMP_FILE_1 && mem=$(awk '{print $1}' $TEMP_FILE_1) && sudo sed -i "s|#work_mem = 4MB|work_mem = $mem|g" $POSTGRES
 #mem=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/32"MB"}') && sudo sed -i "s|#work_mem = 4MB|work_mem = $mem|g" $POSTGRES
 sudo sed -i "s|#fsync = on|fsync = on|g" $POSTGRES
 sudo sed -i "s|#checkpoint_completion_target = 0.5|checkpoint_completion_target = 0.5|g" $POSTGRES
@@ -182,7 +182,7 @@ else
 fi
 sudo sed -i "s|#autovacuum_naptime = 1min|autovacuum_naptime = 20s|g" $POSTGRES
 sudo sed -i "s|#max_files_per_process = 1000|max_files_per_process = 8000|g" $POSTGRES
-get3=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/1000}') && printf '%.*f\n' 0 $get3 | awk '{print $1*1000"MB"}' > $TEMP_FILE && cache_size=$(awk '{print $1}' $TEMP_FILE) && sudo sed -i "s|#effective_cache_size = 4GB|effective_cache_size = $cache_size|g" $POSTGRES
+get3=$(awk -F'/' 'FNR==4 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/1000}') && printf '%.*f\n' 0 $get3 | awk '{print $1*1000"MB"}' > $TEMP_FILE && cache_size=$(awk '{print $1}' $TEMP_FILE) && sudo sed -i "s|#effective_cache_size = 4GB|effective_cache_size = $cache_size|g" $POSTGRES
 #cache_size=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000"MB"}') && sudo sed -i "s|#effective_cache_size = 4GB|effective_cache_size = $cache_size|g" $POSTGRES
 sudo sed -i "s|#random_page_cost = 4.0|random_page_cost = 1.7|g" $POSTGRES
 sudo sed -i "s|#from_collapse_limit = 8|from_collapse_limit = 20|g" $POSTGRES
@@ -829,7 +829,7 @@ else
   make restore >/dev/null
   echo -e "$Red \n WARNING! Postgres configuration file was corrupted and will be restored! YOU NEED TO RUN THIS SCRIPT AGAIN! $Color_Off"
 fi
-if [ "$raw_n" -gt "658" ] ; then
+if [ "$raw_n" -gt "600" ] ; then
   echo -e "$Green \n CONFIGURATION FILE OK! $Color_Off" > /dev/null;
 else
   make restore >/dev/null
@@ -915,7 +915,11 @@ echo -e "$Cyan \n Create new password and set to postgres? $Color_Off"
     encr=$(hexdump -vn16 -e'4/4 "%08X" 1 "\n"' /dev/urandom) # generates random passwd
     echo $pswd_n | openssl enc -aes-256-cbc -md sha512 -a -salt -pass pass:$encr > secr.key && chmod 0400 secr.key
     decrypt_pass=$(cat secr.key | openssl enc -aes-256-cbc -md sha512 -a -d -salt -pass pass:$encr)
-    sudo -u postgres psql -c "ALTER USER postgres PASSWORD '$decrypt_pass';" ;;
+    sudo -u postgres psql -c "ALTER USER postgres PASSWORD '$decrypt_pass';"
+    echo -e "$Yellow \n decryption key: $Color_Off $encr" && sleep 0.3
+    echo -e "$Yellow \n Attention! Save decryption key. If you forget postgres password, $Color_Off" && sleep 0.3
+    echo -e "$Yellow \n you could decrypt it using command >>install.sh show<< $Color_Off" && sleep 0.3
+    sleep 2 ;;
     2)
     echo -e "$Red \n aborted $Color_Off"
     sleep 1 ;;
@@ -927,7 +931,3 @@ echo -e "$Cyan \n Create new password and set to postgres? $Color_Off"
 # copy postgres config file to current dirrectory
 echo -e "$Cyan \n Copy config file to current location $Color_Off" && sleep 1;
 cp /var/lib/pgpro/1c-10/data/postgresql.conf $CUR_DIR/postgresql_configured_$(date "+%Y-%m-%d").conf && sudo rm -rf $CUR_DIR/cfg.md && sudo rm -rf $CUR_DIR/$TEMP_FILE $CUR_DIR/$TEMP_FILE_1 $CUR_DIR/0 $CUR_DIR/1;
-service postgrespro-1c-10 status
-echo -e "$Yellow \n decryption key: $Color_Off $encr"
-echo -e "$Yellow \n Attention! Save decryption key if you forget postgres password! $Color_Off"
-echo -e "$Yellow \n You could decrypt it through commant >>install.sh show<< entering decryption key $Color_Off"
