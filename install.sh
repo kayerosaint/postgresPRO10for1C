@@ -7,7 +7,7 @@
 # The script is primarily intended for use during the initial installation of the system and is written
 #   for the following versions: postgrespro-1c-10-server-10.6-1.el7.x86_64 postgrespro-1c-10-contrib-10.6-1.el7.x86_64
 # Probably, this script will be further optimized
-# For systems with English locale only
+# For systems with Russian locale only
 
 # get decrypt
 string=$1
@@ -159,11 +159,9 @@ echo -e "$Yellow \n WARNING! >>>effective_io_concurrency<<< parameter will be se
 echo -e "$Yellow \n if you want to change it, pls configure manually $Color_Off" && sleep 8;
 sudo sed -i "s|#row_security = on|row_security = off|g" $POSTGRES
 sudo sed -i "s|#ssl = off|ssl = off|g" $POSTGRES
-get1=$(awk -F'/' 'FNR==4 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/1000}') && printf '%.*f\n' 0 $get1 | awk '{print $1*1000/4}' > $TEMP_FILE && get1_1=$(cat $TEMP_FILE) ; printf '%.*f\n' 0 $get1_1 | awk '{print $1"MB"}' > $TEMP_FILE_1 && buffers=$(awk '{print $1}' $TEMP_FILE_1) && sudo sed -i "s|shared_buffers = 128MB|shared_buffers = $buffers|g" $POSTGRES
-#buffers=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/4"MB"}') && sudo sed -i "s|shared_buffers = 128MB|shared_buffers = $buffers|g" $POSTGRES
+get1=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{gsub(/\./, ",",$1); print $1*1000/1000}') && printf '%.*f\n' 0 $get1 | awk '{gsub(/\./, ",",$1); print $1*1000/4}' > $TEMP_FILE && get1_1=$(cat $TEMP_FILE) ; printf '%.*f\n' 0 $get1_1 | awk '{gsub(/\./, ",",$1); print $1"MB"}' > $TEMP_FILE_1 && buffers=$(awk '{print $1}' $TEMP_FILE_1) && sudo sed -i "s|shared_buffers = 128MB|shared_buffers = $buffers|g" $POSTGRES
 sudo sed -i "s|#temp_buffers = 8MB|temp_buffers = 256MB|g" $POSTGRES
-get2=$(awk -F'/' 'FNR==4 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/1000}') && printf '%.*f\n' 0 $get2 | awk '{print $1*1000/32}' > $TEMP_FILE && get2_1=$(cat $TEMP_FILE) ; printf '%.*f\n' 0 $get2_1 | awk '{print $1"MB"}' > $TEMP_FILE_1 && mem=$(awk '{print $1}' $TEMP_FILE_1) && sudo sed -i "s|#work_mem = 4MB|work_mem = $mem|g" $POSTGRES
-#mem=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/32"MB"}') && sudo sed -i "s|#work_mem = 4MB|work_mem = $mem|g" $POSTGRES
+get2=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{gsub(/\./, ",",$1); print $1*1000/1000}') && printf '%.*f\n' 0 $get2 | awk '{gsub(/\./, ",",$1); print $1*1000/32}' > $TEMP_FILE && get2_1=$(cat $TEMP_FILE) ; printf '%.*f\n' 0 $get2_1 | awk '{gsub(/\./, ",",$1); print $1"MB"}' > $TEMP_FILE_1 && mem=$(awk '{print $1}' $TEMP_FILE_1) && sudo sed -i "s|#work_mem = 4MB|work_mem = $mem|g" $POSTGRES
 sudo sed -i "s|#fsync = on|fsync = on|g" $POSTGRES
 sudo sed -i "s|#checkpoint_completion_target = 0.5|checkpoint_completion_target = 0.5|g" $POSTGRES
 sudo sed -i "s|#synchronous_commit = on|synchronous_commit = off|g" $POSTGRES
@@ -175,7 +173,7 @@ sudo sed -i "s|#bgwriter_delay = 200ms|bgwriter_delay = 20ms|g" $POSTGRES
 sudo sed -i "s|#bgwriter_lru_multiplier = 2.0|bgwriter_lru_multiplier = 4.0|g" $POSTGRES
 sudo sed -i "s|#bgwriter_lru_maxpages = 100|bgwriter_lru_maxpages = 400|g" $POSTGRES
 sudo sed -i "s|#autovacuum = on|autovacuum = on|g" $POSTGRES
-a="4" && get3=$(awk -F'thr; ' 'FNR==3 {print $2}' cfg.md | awk -F' running' '{print $1/2}') && printf '%.*f\n' 0 $get3 | awk '{print $1}' > $TEMP_FILE && b=$(awk '{print $1}' $TEMP_FILE)
+a="4" && get3=$(awk -F'thr; ' 'FNR==4 {print $2}' cfg.md | awk -F' running' '{gsub(/\./, ",",$1); print $1/2}') && printf '%.*f\n' 0 $get3 | awk '{print $1}' > $TEMP_FILE && b=$(awk '{print $1}' $TEMP_FILE)
 if [ "$a" -gt "$b" ]; then
   sudo sed -i "s|#autovacuum_max_workers = 3|autovacuum_max_workers = $a|g" $POSTGRES
 else
@@ -183,8 +181,7 @@ else
 fi
 sudo sed -i "s|#autovacuum_naptime = 1min|autovacuum_naptime = 20s|g" $POSTGRES
 sudo sed -i "s|#max_files_per_process = 1000|max_files_per_process = 8000|g" $POSTGRES
-get3=$(awk -F'/' 'FNR==4 {print $2}' cfg.md | awk -F'G]' '{print $1*1000/1000}') && printf '%.*f\n' 0 $get3 | awk '{print $1*1000"MB"}' > $TEMP_FILE && cache_size=$(awk '{print $1}' $TEMP_FILE) && sudo sed -i "s|#effective_cache_size = 4GB|effective_cache_size = $cache_size|g" $POSTGRES
-#cache_size=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{print $1*1000"MB"}') && sudo sed -i "s|#effective_cache_size = 4GB|effective_cache_size = $cache_size|g" $POSTGRES
+get3=$(awk -F'/' 'FNR==4 {print $2}' cfg.md | awk -F'G]' '{gsub(/\./, ",",$1); print $1*1000/1000}') && printf '%.*f\n' 0 $get3 | awk '{gsub(/\./, ",",$1); print $1*1000"MB"}' > $TEMP_FILE && cache_size=$(awk '{print $1}' $TEMP_FILE) && sudo sed -i "s|#effective_cache_size = 4GB|effective_cache_size = $cache_size|g" $POSTGRES
 sudo sed -i "s|#random_page_cost = 4.0|random_page_cost = 1.7|g" $POSTGRES
 sudo sed -i "s|#from_collapse_limit = 8|from_collapse_limit = 20|g" $POSTGRES
 sudo sed -i "s|#join_collapse_limit = 8|join_collapse_limit = 20|g" $POSTGRES
@@ -520,7 +517,7 @@ else
 fi
 
 # autovacuum_max_workers
-a="4" && get4=$(awk -F'thr; ' 'FNR==3 {print $2}' cfg.md | awk -F' running' '{print $1/2}') && printf '%.*f\n' 0 $get4 | awk '{print $1}' > $TEMP_FILE && b=$(awk '{print $1}' $TEMP_FILE)
+a="4" && get4=$(awk -F'thr; ' 'FNR==4 {print $2}' cfg.md | awk -F' running' '{gsub(/\./, ",",$1); print $1/2}') && printf '%.*f\n' 0 $get4 | awk '{print $1}' > $TEMP_FILE && b=$(awk '{print $1}' $TEMP_FILE)
 if [ "$a" -gt "$b" ]; then
   sudo sed -i "s|#autovacuum_max_workers = 3|autovacuum_max_workers = $a|g" $POSTGRES
   if ! grep -q "autovacuum_max_workers = $a" $POSTGRES; then
