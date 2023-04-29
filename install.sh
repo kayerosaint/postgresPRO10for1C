@@ -7,6 +7,7 @@
 # The script is primarily intended for use during the initial installation of the system and is written
 #   for the following versions: postgrespro-1c-10-server-10.6-1.el7.x86_64 postgrespro-1c-10-contrib-10.6-1.el7.x86_64
 # Probably, this script will be further optimized
+# For systems with English locale only
 
 # get decrypt
 string=$1
