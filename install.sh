@@ -181,7 +181,7 @@ else
 fi
 sudo sed -i "s|#autovacuum_naptime = 1min|autovacuum_naptime = 20s|g" $POSTGRES
 sudo sed -i "s|#max_files_per_process = 1000|max_files_per_process = 8000|g" $POSTGRES
-get3=$(awk -F'/' 'FNR==4 {print $2}' cfg.md | awk -F'G]' '{gsub(/\./,$1); print $1}') && printf '%.*f\n' 0 $get3 | awk '{print $1*1000"MB"}' > $TEMP_FILE && cache_size=$(awk '{print $1}' $TEMP_FILE) && sudo sed -i "s|#effective_cache_size = 4GB|effective_cache_size = $cache_size|g" $POSTGRES
+get3=$(awk -F'/' 'FNR==5 {print $2}' cfg.md | awk -F'G]' '{gsub(/\./,$1); print $1}') && printf '%.*f\n' 0 $get3 | awk '{print $1*1000"MB"}' > $TEMP_FILE && cache_size=$(awk '{print $1}' $TEMP_FILE) && sudo sed -i "s|#effective_cache_size = 4GB|effective_cache_size = $cache_size|g" $POSTGRES
 sudo sed -i "s|#random_page_cost = 4.0|random_page_cost = 1.7|g" $POSTGRES
 sudo sed -i "s|#from_collapse_limit = 8|from_collapse_limit = 20|g" $POSTGRES
 sudo sed -i "s|#join_collapse_limit = 8|join_collapse_limit = 20|g" $POSTGRES
