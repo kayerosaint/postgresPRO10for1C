@@ -35,6 +35,7 @@ touch='if [ 1 == 1 ]; then sudo touch $1; fi'
 set -- $TEMP_FILE && eval "$touch" ; set -- $TEMP_FILE_1 && eval "$touch" ; sudo chmod 0755 $TEMP_FILE_1 $TEMP_FILE
 CUR_DIR=$(pwd)
 
+
 # logs
 exec 2>logs+errors
 
