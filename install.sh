@@ -953,7 +953,7 @@ echo -e "$Cyan \n Create new password and set to postgres? $Color_Off"
     *)
     echo -e "$Red \n error $Color_Off"
     sleep 1
-    esac
+  esac
 
 # copy postgres config file to current dirrectory
 echo -e "$Cyan \n Copy config file to current location $Color_Off" && sleep 1;
