@@ -889,7 +889,7 @@ fi
 
 ls -l /home/sqldata > $TEMP_FILE &&
 if ! grep -q "postgres postgres" $TEMP_FILE; then
-  chown postgres /home/sqldata ;
+  chown -R postgres:postgres /home/sqldata ;
 else
   echo "" ;
 fi
@@ -943,6 +943,7 @@ echo -e "$Cyan \n Create new password and set to postgres? $Color_Off"
     echo $pswd_n | openssl enc -aes-256-cbc -md sha512 -a -salt -pass pass:$encr > secr.key && chmod 0400 secr.key
     decrypt_pass=$(cat secr.key | openssl enc -aes-256-cbc -md sha512 -a -d -salt -pass pass:$encr)
     sudo -u postgres psql -c "ALTER USER postgres PASSWORD '$decrypt_pass';"
+    echo -e "$decrypt_pass\n$decrypt_pass" | sudo passwd postgres
     echo -e "$Yellow \n decryption key: $Color_Off $encr" && sleep 0.3
     echo -e "$Yellow \n Attention! Save decryption key. If you forget postgres password, $Color_Off" && sleep 0.3
     echo -e "$Yellow \n you could decrypt it using command >>install.sh show<< $Color_Off" && sleep 0.3
